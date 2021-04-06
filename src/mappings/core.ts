@@ -13,6 +13,7 @@ import {
 import { Pair as PairContract, Mint, Burn, Swap, Transfer, Sync } from '../types/templates/Pair/Pair'
 import { updatePairDayData, updateTokenDayData, updateUniswapDayData, updatePairHourData } from './dayUpdates'
 import { getEthPriceInUSD, findEthPerToken, getTrackedVolumeUSD, getTrackedLiquidityUSD } from './pricing'
+import { setTokenPerMinutes } from './tokenMinuteUpadates'
 import {
   convertTokenToDecimal,
   ADDRESS_ZERO,
@@ -240,6 +241,9 @@ export function handleSync(event: Sync): void {
 
   token0.derivedETH = findEthPerToken(token0 as Token)
   token1.derivedETH = findEthPerToken(token1 as Token)
+
+  setTokenPerMinutes(token0, Sync)
+  setTokenPerMinutes(token1, Sync)
   token0.save()
   token1.save()
 
@@ -267,6 +271,8 @@ export function handleSync(event: Sync): void {
   // now correctly set liquidity amounts for each token
   token0.totalLiquidity = token0.totalLiquidity.plus(pair.reserve0)
   token1.totalLiquidity = token1.totalLiquidity.plus(pair.reserve1)
+  setTokenPerMinutes(token0, Sync)
+  setTokenPerMinutes(token1, Sync)
 
   // save entities
   pair.save()
@@ -305,6 +311,8 @@ export function handleMint(event: Mint): void {
   pair.txCount = pair.txCount.plus(ONE_BI)
   uniswap.txCount = uniswap.txCount.plus(ONE_BI)
 
+  setTokenPerMinutes(token0, Mint)
+  setTokenPerMinutes(token1, Mint)
   // save entities
   token0.save()
   token1.save()
@@ -364,6 +372,9 @@ export function handleBurn(event: Burn): void {
   // update txn counts
   uniswap.txCount = uniswap.txCount.plus(ONE_BI)
   pair.txCount = pair.txCount.plus(ONE_BI)
+
+  setTokenPerMinutes(token0, Burn)
+  setTokenPerMinutes(token1, Burn)
 
   // update global counter and save
   token0.save()
@@ -453,6 +464,9 @@ export function handleSwap(event: Swap): void {
   uniswap.totalVolumeETH = uniswap.totalVolumeETH.plus(trackedAmountETH)
   uniswap.untrackedVolumeUSD = uniswap.untrackedVolumeUSD.plus(derivedAmountUSD)
   uniswap.txCount = uniswap.txCount.plus(ONE_BI)
+
+  setTokenPerMinutes(token0, Swap)
+  setTokenPerMinutes(token1, Swap)
 
   // save entities
   pair.save()

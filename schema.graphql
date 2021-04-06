@@ -294,3 +294,17 @@ type TokenDayData @entity {
   # price stats
   priceUSD: BigDecimal!
 }
+
+type TokenMinuteData @entity {
+  id: ID!
+
+  startTimestamp: Int!
+  endTimestamp: Int!
+  token: Token!
+
+  openPriceUSD: BigDecimal!
+  closePriceUSD: BigDecimal!
+  highPriceUSD: BigDecimal!
+  minPriceUSD: BigDecimal!
+
+}
