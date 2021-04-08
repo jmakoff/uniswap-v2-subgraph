@@ -1,5 +1,5 @@
 /* eslint-disable prefer-const */
-import { BigInt, BigDecimal, store, Address } from '@graphprotocol/graph-ts'
+import { BigInt, BigDecimal, store, Address, log } from '@graphprotocol/graph-ts'
 import {
   Pair,
   Token,
@@ -8,12 +8,16 @@ import {
   Mint as MintEvent,
   Burn as BurnEvent,
   Swap as SwapEvent,
-  Bundle
+  Bundle,
+  PairMinuteData
 } from '../types/schema'
 import { Pair as PairContract, Mint, Burn, Swap, Transfer, Sync } from '../types/templates/Pair/Pair'
 import { updatePairDayData, updateTokenDayData, updateUniswapDayData, updatePairHourData } from './dayUpdates'
 import { getEthPriceInUSD, findEthPerToken, getTrackedVolumeUSD, getTrackedLiquidityUSD } from './pricing'
 import { setTokenPerMinutes } from './tokenMinuteUpadates'
+import { setPairPerMinutes } from './pairMinuteUpdates'
+import { setSwapsPerMinutes } from './swapMinuteUpdates'
+
 import {
   convertTokenToDecimal,
   ADDRESS_ZERO,
@@ -160,6 +164,7 @@ export function handleTransfer(event: Transfer): void {
       burn.liquidity = value
       burn.transaction = transaction.id
       burn.timestamp = transaction.timestamp
+
     }
 
     // if this logical burn included a fee mint, account for this
@@ -242,8 +247,6 @@ export function handleSync(event: Sync): void {
   token0.derivedETH = findEthPerToken(token0 as Token)
   token1.derivedETH = findEthPerToken(token1 as Token)
 
-  setTokenPerMinutes(token0, Sync)
-  setTokenPerMinutes(token1, Sync)
   token0.save()
   token1.save()
 
@@ -271,14 +274,16 @@ export function handleSync(event: Sync): void {
   // now correctly set liquidity amounts for each token
   token0.totalLiquidity = token0.totalLiquidity.plus(pair.reserve0)
   token1.totalLiquidity = token1.totalLiquidity.plus(pair.reserve1)
-  setTokenPerMinutes(token0, Sync)
-  setTokenPerMinutes(token1, Sync)
 
   // save entities
   pair.save()
   uniswap.save()
   token0.save()
   token1.save()
+
+  setTokenPerMinutes(token0 as Token, event)
+  setTokenPerMinutes(token1 as Token, event)
+  setPairPerMinutes(pair as Pair, event)
 }
 
 export function handleMint(event: Mint): void {
@@ -311,13 +316,14 @@ export function handleMint(event: Mint): void {
   pair.txCount = pair.txCount.plus(ONE_BI)
   uniswap.txCount = uniswap.txCount.plus(ONE_BI)
 
-  setTokenPerMinutes(token0, Mint)
-  setTokenPerMinutes(token1, Mint)
   // save entities
   token0.save()
   token1.save()
   pair.save()
   uniswap.save()
+
+  setTokenPerMinutes(token0 as Token, event)
+  setTokenPerMinutes(token1 as Token, event)
 
   mint.sender = event.params.sender
   mint.amount0 = token0Amount as BigDecimal
@@ -336,6 +342,20 @@ export function handleMint(event: Mint): void {
   updateUniswapDayData(event)
   updateTokenDayData(token0 as Token, event)
   updateTokenDayData(token1 as Token, event)
+  setPairPerMinutes(pair as Pair, event)
+
+  let intervalInSec = 60 //value of period in sec
+  let timestamp = event.block.timestamp.toI32()
+  let intervalIndex = timestamp /  intervalInSec // get unique interval within unix history
+  let intervalEntityID = pair.id
+    .concat('-')
+    .concat(BigInt.fromI32(intervalIndex).toString())
+  let pairIntervalInstance = PairMinuteData.load(intervalEntityID)
+  if (!pairIntervalInstance) {
+    log.error('cannot find pairIntervalInstance at {}', [intervalEntityID])
+  }
+  pairIntervalInstance.totalMint = pairIntervalInstance.totalMint.plus(mint.amountUSD as BigDecimal)
+  pairIntervalInstance.save()
 }
 
 export function handleBurn(event: Burn): void {
@@ -373,14 +393,15 @@ export function handleBurn(event: Burn): void {
   uniswap.txCount = uniswap.txCount.plus(ONE_BI)
   pair.txCount = pair.txCount.plus(ONE_BI)
 
-  setTokenPerMinutes(token0, Burn)
-  setTokenPerMinutes(token1, Burn)
 
   // update global counter and save
   token0.save()
   token1.save()
   pair.save()
   uniswap.save()
+
+  setTokenPerMinutes(token0 as Token, event)
+  setTokenPerMinutes(token1 as Token, event)
 
   // update burn
   // burn.sender = event.params.sender
@@ -401,6 +422,20 @@ export function handleBurn(event: Burn): void {
   updateUniswapDayData(event)
   updateTokenDayData(token0 as Token, event)
   updateTokenDayData(token1 as Token, event)
+  setPairPerMinutes(pair as Pair, event)
+
+  let intervalInSec = 60 //value of period in sec
+  let timestamp = event.block.timestamp.toI32()
+  let intervalIndex = timestamp /  intervalInSec // get unique interval within unix history
+  let intervalEntityID = pair.id
+    .concat('-')
+    .concat(BigInt.fromI32(intervalIndex).toString())
+  let pairIntervalInstance = PairMinuteData.load(intervalEntityID)
+  if (!pairIntervalInstance) {
+    log.error('cannot find pairIntervalInstance at {}', [intervalEntityID])
+  }
+  pairIntervalInstance.totalBurn = pairIntervalInstance.totalBurn.plus(burn.amountUSD as BigDecimal)
+  pairIntervalInstance.save()
 }
 
 export function handleSwap(event: Swap): void {
@@ -465,14 +500,16 @@ export function handleSwap(event: Swap): void {
   uniswap.untrackedVolumeUSD = uniswap.untrackedVolumeUSD.plus(derivedAmountUSD)
   uniswap.txCount = uniswap.txCount.plus(ONE_BI)
 
-  setTokenPerMinutes(token0, Swap)
-  setTokenPerMinutes(token1, Swap)
 
   // save entities
   pair.save()
   token0.save()
   token1.save()
   uniswap.save()
+
+  setTokenPerMinutes(token0 as Token, event)
+  setTokenPerMinutes(token1 as Token, event)
+  setPairPerMinutes(pair as Pair, event)
 
   let transaction = Transaction.load(event.transaction.hash.toHexString())
   if (transaction === null) {
@@ -508,6 +545,7 @@ export function handleSwap(event: Swap): void {
   swap.amountUSD = trackedAmountUSD === ZERO_BD ? derivedAmountUSD : trackedAmountUSD
   swap.save()
 
+  setSwapsPerMinutes(swap as SwapEvent, event)
   // update the transaction
 
   // TODO: Consider using .concat() for handling array updates to protect

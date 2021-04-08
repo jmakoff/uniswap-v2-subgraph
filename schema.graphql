@@ -295,6 +295,31 @@ type TokenDayData @entity {
   priceUSD: BigDecimal!
 }
 
+type PairMinuteData @entity {
+  id: ID!
+  pair: Pair!
+
+  # reserves
+  reserve0: BigDecimal!
+  reserve1: BigDecimal!
+
+  startTimestamp: Int!
+  endTimestamp: Int!
+
+  totalMint: BigDecimal!
+  totalBurn: BigDecimal!
+
+  openPriceLPTokenUSD: BigDecimal!
+  closePriceLPTokenUSD: BigDecimal!
+  highPriceLPTokenUSD: BigDecimal!
+  minPriceLPTokenUSD: BigDecimal!
+  openPriceLPTokenETH: BigDecimal!
+  closePriceLPTokenETH: BigDecimal!
+  highPriceLPTokenETH: BigDecimal!
+  minPriceLPTokenETH: BigDecimal!
+}
+
+
 type TokenMinuteData @entity {
   id: ID!
 
@@ -306,5 +331,41 @@ type TokenMinuteData @entity {
   closePriceUSD: BigDecimal!
   highPriceUSD: BigDecimal!
   minPriceUSD: BigDecimal!
-
+  openPriceETH: BigDecimal!
+  closePriceETH: BigDecimal!
+  highPriceETH: BigDecimal!
+  minPriceETH: BigDecimal!
 }
+
+type SwapMinuteData @entity {
+  id: ID!
+  sender: Bytes!
+  totalAmount: BigDecimal!
+  token: Token!
+  startTimestamp: Int!
+  endTimestamp: Int!
+}
+
+# type WalletMinuteData @entity {
+#   id: ID!
+#   tokens: [walletTokens!] @derivedFrom(field: wallet)
+#   startTimestamp: Int!
+#   endTimestamp: Int! 
+
+#   owner: Bytes!
+#   openAmountInUsd: BigDecimal!
+#   closeAmountInUsd: BigDecimal! 
+#   highAmountInUsd: BigDecimal!
+#   minAmountInUsd: BigDecimal!
+# }
+
+# type walletTokens @entity {
+#   id: ID!
+#   wallet: WalletMinuteData!
+#   token: Token!
+#   tokenAmount: BigDecimal!
+# }
+
+# type walletHolders @entity {
+#   id: ID!
+# } 
