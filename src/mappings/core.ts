@@ -16,7 +16,7 @@ import { updatePairDayData, updateTokenDayData, updateUniswapDayData, updatePair
 import { getEthPriceInUSD, findEthPerToken, getTrackedVolumeUSD, getTrackedLiquidityUSD } from './pricing'
 import { setTokenPerMinutes } from './tokenMinuteUpadates'
 import { setPairPerMinutes } from './pairMinuteUpdates'
-import { setSwapsPerMinutes } from './swapMinuteUpdates'
+import { setSwapsPerMinutes, setMintsPerMinutes, setBurnsPerMinutes } from './walletMinuteUpdates'
 
 import {
   convertTokenToDecimal,
@@ -48,6 +48,7 @@ export function handleTransfer(event: Transfer): void {
   createUser(from)
   let to = event.params.to
   createUser(to)
+
 
   // get pair and load contract
   let pair = Pair.load(event.address.toHexString())
@@ -331,6 +332,7 @@ export function handleMint(event: Mint): void {
   mint.logIndex = event.logIndex
   mint.amountUSD = amountTotalUSD as BigDecimal
   mint.save()
+  setMintsPerMinutes(mint as MintEvent, event)
 
   // update the LP position
   let liquidityPosition = createLiquidityPosition(event.address, mint.to as Address)
@@ -412,6 +414,7 @@ export function handleBurn(event: Burn): void {
   burn.amountUSD = amountTotalUSD as BigDecimal
   burn.save()
 
+  setBurnsPerMinutes(burn as BurnEvent, event)
   // update the LP position
   let liquidityPosition = createLiquidityPosition(event.address, burn.sender as Address)
   createLiquiditySnapshot(liquidityPosition, event)

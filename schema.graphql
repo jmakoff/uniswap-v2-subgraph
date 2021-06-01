@@ -341,31 +341,31 @@ type SwapMinuteData @entity {
   id: ID!
   sender: Bytes!
   totalAmount: BigDecimal!
+  totalAmountUSD: BigDecimal!
+  totalAmountETH: BigDecimal!
   token: Token!
   startTimestamp: Int!
   endTimestamp: Int!
 }
 
-# type WalletMinuteData @entity {
-#   id: ID!
-#   tokens: [walletTokens!] @derivedFrom(field: wallet)
-#   startTimestamp: Int!
-#   endTimestamp: Int! 
+type MintMinuteData @entity {
+  id: ID!
+  receiver: Bytes!
+  totalAmount: BigDecimal!
+  totalAmountUSD: BigDecimal!
+  totalAmountETH: BigDecimal!
+  token: Token!
+  startTimestamp: Int!
+  endTimestamp: Int!
+}
 
-#   owner: Bytes!
-#   openAmountInUsd: BigDecimal!
-#   closeAmountInUsd: BigDecimal! 
-#   highAmountInUsd: BigDecimal!
-#   minAmountInUsd: BigDecimal!
-# }
-
-# type walletTokens @entity {
-#   id: ID!
-#   wallet: WalletMinuteData!
-#   token: Token!
-#   tokenAmount: BigDecimal!
-# }
-
-# type walletHolders @entity {
-#   id: ID!
-# } 
+type BurnMinuteData @entity {
+  id: ID!
+  sender: Bytes!
+  totalAmount: BigDecimal!
+  totalAmountUSD: BigDecimal!
+  totalAmountETH: BigDecimal!
+  token: Token!
+  startTimestamp: Int!
+  endTimestamp: Int!
+}
